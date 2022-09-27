@@ -1,0 +1,63 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
+
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Burnable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
+
+contract MyTokenERC1155 is ERC1155, ERC1155Burnable, Ownable, ERC1155Supply {
+    
+    uint256[] supplies = [ 10, 10, 10];
+    uint256[] rates = [0.05 ether, 0.01 ether, 0.25 ether];
+    constructor() ERC1155("ERC1155Test") {}
+
+
+    // account = account for the mint
+    // id = Id of the nft to mint
+    // amount = how many nft of this id want to mint
+    function mint(address account, uint256 id, uint256 amount, bytes memory data)
+        public
+        payable
+    {
+        require(id <= supplies.length, "token doesn't exist" );
+        require(id > 0, "Token doesn't exist");
+        uint256 index = id -1;
+
+        require(amount <= supplies[index], "not enough supply");
+        require(msg.value >= amount * rates[index], "not enough ether sent");
+
+        _mint(account, id, amount, data);
+        supplies[index] -= amount;
+    }
+
+    function mintBatch(address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data)
+        public
+        payable
+    {
+        _mintBatch(to, ids, amounts, data);
+    }
+
+    // The following functions are overrides required by Solidity.
+
+    function _beforeTokenTransfer(address operator, address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data)
+        internal
+        override(ERC1155, ERC1155Supply)
+    {
+        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+    }
+
+    function withdraw() public onlyOwner {
+        require(address(this).balance > 0, "Balance is 0");
+        payable(owner()).transfer(address(this).balance);
+    }
+
+    function getBalance() public view returns(uint) {
+        return address(this).balance;
+    }
+
+    function getSuppliesnft1() external view returns(uint) {
+        return supplies[0];
+    }
+
+}
